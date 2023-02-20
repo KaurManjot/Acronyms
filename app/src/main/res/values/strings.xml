@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">SimpleAcronyms</string>
+    <string name="search_text_hint">Enter Acronyms Here</string>
+</resources>
