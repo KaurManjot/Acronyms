@@ -6,7 +6,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.simpleacronyms.repository.AcronymsRepository
+import com.example.simpleacronyms.util.EspressoIdlingResource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
@@ -17,6 +19,8 @@ class AcronymsViewModel @Inject constructor(
     private val repository: AcronymsRepository
 ) : ViewModel() {
 
+    var job: Job? = null
+
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
 
@@ -24,7 +28,13 @@ class AcronymsViewModel @Inject constructor(
     val content: LiveData<List<String>> = _content
 
     fun getLongForm(shortForm: String) {
-        viewModelScope.launch {
+        job?.let {
+            if (it.isActive) {
+                it.cancel()
+            }
+        }
+        EspressoIdlingResource.increment()
+        job = viewModelScope.launch {
             _content.value = emptyList()
             _isLoading.value = true
             if (shortForm.isNullOrBlank() || shortForm.isEmpty()) {
@@ -43,6 +53,8 @@ class AcronymsViewModel @Inject constructor(
                 Log.e(TAG, "HttpException, unexpected response")
                 _isLoading.value = false
                 return@launch
+            } finally {
+                EspressoIdlingResource.decrement()
             }
             if (response.isSuccessful && response.body() != null) {
                 if (response.body()?.isNotEmpty() == true) {
@@ -57,6 +69,7 @@ class AcronymsViewModel @Inject constructor(
                 Log.e(TAG, "Response error")
             }
             _isLoading.value = false
+            EspressoIdlingResource.decrement()
         }
     }
 
